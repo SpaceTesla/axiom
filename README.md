@@ -48,22 +48,30 @@ The API will be available at `http://localhost:8000` with interactive docs at `/
 
 ## Deployment on Civo
 
+**📖 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
+
 ### Prerequisites
 
 - Civo account ([Sign up here](https://www.civo.com/))
 - Civo CLI installed (`civo` command)
 - Docker installed (for building images)
 - kubectl configured for your Civo cluster
+- GitHub account (for GHCR) or Docker Hub account
 
-### Step 1: Build Docker Image
+### Quick Deployment Steps
+
+**1. Build and Push Image to Registry**
 
 ```bash
 # Build the image
 docker build -t axiom-api:latest .
 
-# Tag for your container registry (if using one)
-# docker tag axiom-api:latest your-registry/axiom-api:latest
-# docker push your-registry/axiom-api:latest
+# Tag for GitHub Container Registry (or your preferred registry)
+docker tag axiom-api:latest ghcr.io/YOUR_USERNAME/axiom-api:latest
+
+# Login and push
+docker login ghcr.io -u YOUR_USERNAME
+docker push ghcr.io/YOUR_USERNAME/axiom-api:latest
 ```
 
 ### Step 2: Create Civo Kubernetes Cluster
@@ -87,13 +95,23 @@ kubectl get nodes
 
 ### Step 3: Create Kubernetes Secrets
 
+**Important:** You need TWO secrets - one for image pull (if using private registry) and one for the Google API key.
+
 ```bash
-# Create secret for Google API key
+# 1. Create GHCR secret (for private image pull)
+# Get a GitHub Personal Access Token with 'read:packages' permission
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=YOUR_GITHUB_USERNAME \
+  --docker-password=YOUR_GITHUB_TOKEN \
+  --docker-email=YOUR_EMAIL
+
+# 2. Create secret for Google API key
 kubectl create secret generic axiom-secrets \
   --from-literal=google-api-key='YOUR_GOOGLE_API_KEY'
 
-# Verify secret was created
-kubectl get secret axiom-secrets
+# Verify secrets were created
+kubectl get secrets
 ```
 
 ### Step 4: Deploy to Kubernetes
@@ -119,36 +137,45 @@ kubectl get services
 
 **Note:** If you see errors about `kustomization.yaml`, that's normal - it's only used with `kubectl apply -k` (kustomize). Use individual `kubectl apply -f` commands instead.
 
-### Step 5: Expose the API (Optional)
-
-#### Option A: Using Civo Load Balancer
+### Step 5: Expose the API with LoadBalancer
 
 ```bash
 # Update service to use LoadBalancer type
 kubectl patch service axiom-api-service -p '{"spec":{"type":"LoadBalancer"}}'
 
-# Get external IP
+# Wait a few seconds, then get external IP
 kubectl get service axiom-api-service
+
+# Your API will be accessible at: http://EXTERNAL-IP
+# Example endpoints:
+# - http://EXTERNAL-IP/health
+# - http://EXTERNAL-IP/docs (Swagger UI)
+# - http://EXTERNAL-IP/api/v1/debate (POST)
 ```
 
-#### Option B: Using Ingress
-
-1. Update `k8s/ingress.yaml` with your domain
-2. Apply ingress:
-   ```bash
-   kubectl apply -f k8s/ingress.yaml
-   ```
+**Note:** The external IP may take 1-2 minutes to be assigned. Keep checking with `kubectl get service axiom-api-service`.
 
 ### Step 6: Verify Deployment
 
 ```bash
-# Check pod logs
-kubectl logs -l app=axiom-api
+# Check pods are running
+kubectl get pods -l app=axiom-api
+# Should show STATUS: Running and READY: 1/1
 
-# Test health endpoint
+# Get your external IP
+kubectl get service axiom-api-service
+# Note the EXTERNAL-IP address
+
+# Test the API (replace EXTERNAL_IP with your actual IP)
+curl http://EXTERNAL_IP/health
+curl http://EXTERNAL_IP/
+
+# Or use port-forward for local testing
 kubectl port-forward service/axiom-api-service 8000:80
 curl http://localhost:8000/health
 ```
+
+**Your API is now live and accessible on the internet!** 🚀
 
 ## Configuration
 
@@ -237,11 +264,23 @@ kubectl describe pod <pod-name>
 kubectl logs <pod-name>
 ```
 
+### Image pull errors
+
+**Error: "unauthorized" or "pull access denied"**
+- Your image is private and needs authentication
+- Create the GHCR secret (see Step 3)
+- Verify: `kubectl get secret ghcr-secret`
+
+**Error: "ImagePullBackOff"**
+- Check image name in `k8s/deployment.yaml` matches your registry
+- Verify image exists: `docker pull YOUR_IMAGE_NAME`
+- Ensure `imagePullSecrets` is configured in deployment.yaml
+
 ### API key issues
 
 ```bash
 # Verify secret
-kubectl get secret axiom-secrets -o yaml
+kubectl get secret axiom-secrets
 
 # Update secret
 kubectl create secret generic axiom-secrets \
@@ -251,6 +290,12 @@ kubectl create secret generic axiom-secrets \
 # Restart pods
 kubectl rollout restart deployment axiom-api
 ```
+
+### Service external IP is pending
+
+- This is normal and can take 1-2 minutes
+- Keep checking: `kubectl get service axiom-api-service`
+- If it stays pending for >5 minutes, check Civo dashboard for LoadBalancer status
 
 ## License
 
