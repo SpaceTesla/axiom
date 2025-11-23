@@ -1,0 +1,17 @@
+[project]
+name = "axiom"
+version = "0.1.0"
+description = "Axiom - Hyper-rational debate API"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "langchain>=1.0.8",
+    "langchain-community>=0.4.1",
+    "langchain-core>=1.1.0",
+    "langchain-google-genai>=3.1.0",
+    "python-dotenv>=1.2.1",
+]
