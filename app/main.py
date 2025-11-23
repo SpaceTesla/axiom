@@ -43,12 +43,24 @@ app.include_router(v1_router)
 
 @app.get("/health", tags=["health"])
 async def health_check() -> JSONResponse:
-    """Health check endpoint."""
+    """Health check endpoint for Kubernetes liveness/readiness probes."""
     return JSONResponse(
         content={
             "status": "healthy",
-            "version": settings.api_version
-        }
+            "version": settings.api_version,
+            "environment": settings.environment
+        },
+        status_code=200
+    )
+
+
+@app.get("/ready", tags=["health"])
+async def readiness_check() -> JSONResponse:
+    """Readiness check endpoint for Kubernetes readiness probe."""
+    # Add any dependency checks here (e.g., database, external services)
+    return JSONResponse(
+        content={"status": "ready"},
+        status_code=200
     )
 
 

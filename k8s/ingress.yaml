@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: axiom-api-ingress
+  labels:
+    app: axiom-api
+  annotations:
+    # For HTTPS (if you have TLS configured)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  # Modern way using ingressClassName (replaces deprecated kubernetes.io/ingress.class annotation)
+  # Check your Civo cluster's ingress controller: kubectl get ingressclass
+  # Common values: traefik, nginx, or your custom ingress class name
+  ingressClassName: traefik
+  rules:
+  - host: axiom-api.yourdomain.com  # Change to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: axiom-api-service
+            port:
+              number: 80
+  # Uncomment when you have TLS certificates
+  # tls:
+  # - hosts:
+  #   - axiom-api.yourdomain.com
+  #   secretName: axiom-api-tls
+

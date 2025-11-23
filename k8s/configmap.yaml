@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: axiom-config
+  labels:
+    app: axiom-api
+data:
+  llm_model: "gemini-3-pro-preview"
+  cors_origins: "*"  # Change to specific domains in production, e.g., "https://yourdomain.com,https://www.yourdomain.com"
+  api_title: "Axiom API"
+  api_version: "1.0.0"
+
