@@ -22,12 +22,14 @@ A hyper-rational debate API built with FastAPI and LangChain, powered by Google 
 
 1. Clone the repository
 2. Create a virtual environment:
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. Install dependencies:
+
    ```bash
    pip install -e .
    # Or with UV:
@@ -35,6 +37,7 @@ A hyper-rational debate API built with FastAPI and LangChain, powered by Google 
    ```
 
 4. Create a `.env` file:
+
    ```env
    GOOGLE_API_KEY=your_api_key_here
    ```
@@ -46,7 +49,48 @@ A hyper-rational debate API built with FastAPI and LangChain, powered by Google 
 
 The API will be available at `http://localhost:8000` with interactive docs at `/docs`.
 
-## Deployment on Civo
+## Frontend (Streamlit)
+
+A simple Streamlit frontend is available to interact with the Axiom API.
+
+### Running the Frontend
+
+```bash
+# Install dependencies (if not already installed)
+pip install -e .
+
+# Run the Streamlit app
+streamlit run frontend.py
+```
+
+The frontend will open in your browser at `http://localhost:8501`.
+
+### Features
+
+- Clean, modern UI
+- Submit arguments for debate
+- View Axiom's responses
+- Configurable API URL (defaults to your deployed Civo instance)
+- Error handling and loading states
+
+### Configuration
+
+You can change the API URL in the sidebar. By default, it connects to the deployed Civo instance, but you can also use:
+
+- Local API: `http://localhost:8000`
+- Any other deployed instance
+
+## Frontend Deployment on Civo
+
+The Streamlit frontend can be deployed alongside the API. See [DEPLOYMENT.md](DEPLOYMENT.md) for complete instructions.
+
+**Quick steps:**
+
+1. Build and push frontend image: `docker build -f Dockerfile.frontend -t ghcr.io/USERNAME/axiom-frontend:latest .`
+2. Deploy: `kubectl apply -f k8s/frontend-deployment.yaml && kubectl apply -f k8s/frontend-service.yaml`
+3. Expose: `kubectl patch service axiom-frontend-service -p '{"spec":{"type":"LoadBalancer"}}'`
+
+## API Deployment on Civo
 
 **📖 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
@@ -181,14 +225,14 @@ curl http://localhost:8000/health
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|----------|----------|
-| `GOOGLE_API_KEY` | Google API key for Gemini | - | Yes |
-| `PORT` | Server port | 8000 | No |
-| `DEBUG` | Enable debug mode | false | No |
-| `ENVIRONMENT` | Environment (development/production) | production | No |
-| `LLM_MODEL` | LLM model name | gemini-3-pro-preview | No |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | * | No |
+| Variable         | Description                            | Default              | Required |
+| ---------------- | -------------------------------------- | -------------------- | -------- |
+| `GOOGLE_API_KEY` | Google API key for Gemini              | -                    | Yes      |
+| `PORT`           | Server port                            | 8000                 | No       |
+| `DEBUG`          | Enable debug mode                      | false                | No       |
+| `ENVIRONMENT`    | Environment (development/production)   | production           | No       |
+| `LLM_MODEL`      | LLM model name                         | gemini-3-pro-preview | No       |
+| `CORS_ORIGINS`   | Allowed CORS origins (comma-separated) | \*                   | No       |
 
 ### Kubernetes Configuration
 
@@ -239,6 +283,7 @@ axiom/
 ### Logs
 
 View logs in Kubernetes:
+
 ```bash
 kubectl logs -l app=axiom-api -f
 ```
@@ -246,6 +291,7 @@ kubectl logs -l app=axiom-api -f
 ## Scaling
 
 Scale the deployment:
+
 ```bash
 kubectl scale deployment axiom-api --replicas=3
 ```
@@ -267,11 +313,13 @@ kubectl logs <pod-name>
 ### Image pull errors
 
 **Error: "unauthorized" or "pull access denied"**
+
 - Your image is private and needs authentication
 - Create the GHCR secret (see Step 3)
 - Verify: `kubectl get secret ghcr-secret`
 
 **Error: "ImagePullBackOff"**
+
 - Check image name in `k8s/deployment.yaml` matches your registry
 - Verify image exists: `docker pull YOUR_IMAGE_NAME`
 - Ensure `imagePullSecrets` is configured in deployment.yaml
@@ -300,4 +348,3 @@ kubectl rollout restart deployment axiom-api
 ## License
 
 [Your License Here]
-

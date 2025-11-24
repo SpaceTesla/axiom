@@ -43,6 +43,16 @@ kubectl patch service axiom-api-service -p '{"spec":{"type":"LoadBalancer"}}'
 # 6. Get your public IP
 kubectl get service axiom-api-service
 # Access your API at: http://EXTERNAL-IP
+
+# 7. Deploy Frontend (Optional)
+docker build -f Dockerfile.frontend -t axiom-frontend:latest .
+docker tag axiom-frontend:latest ghcr.io/spacetesla/axiom-frontend:latest
+docker push ghcr.io/spacetesla/axiom-frontend:latest
+kubectl apply -f k8s/frontend-deployment.yaml
+kubectl apply -f k8s/frontend-service.yaml
+kubectl patch service axiom-frontend-service -p '{"spec":{"type":"LoadBalancer"}}'
+kubectl get service axiom-frontend-service
+# Access frontend at: http://FRONTEND_EXTERNAL-IP
 ```
 
 ## Detailed Steps
@@ -346,3 +356,48 @@ civo kubernetes delete axiom-cluster
 ```
 
 **Note:** Deleting the cluster will remove all resources and stop billing.
+
+## Deploying the Frontend (Streamlit)
+
+The Streamlit frontend can also be deployed to Civo alongside the API.
+
+### 1. Build and Push Frontend Image
+
+```bash
+# Build the frontend image
+docker build -f Dockerfile.frontend -t axiom-frontend:latest .
+
+# Tag for GHCR
+docker tag axiom-frontend:latest ghcr.io/spacetesla/axiom-frontend:latest
+
+# Push to GHCR
+docker push ghcr.io/spacetesla/axiom-frontend:latest
+```
+
+### 2. Deploy Frontend
+
+```bash
+# Apply frontend manifests
+kubectl apply -f k8s/frontend-deployment.yaml
+kubectl apply -f k8s/frontend-service.yaml
+
+# Expose with LoadBalancer
+kubectl patch service axiom-frontend-service -p '{"spec":{"type":"LoadBalancer"}}'
+
+# Get external IP
+kubectl get service axiom-frontend-service
+```
+
+### 3. Configure Frontend to Use API
+
+The frontend is configured to use the API service internally via Kubernetes service DNS:
+- Internal: `http://axiom-api-service:80` (set via `API_URL` env var)
+- External: Users can override in the sidebar if needed
+
+**Note:** Make sure the frontend's default API URL in the sidebar matches your API's external IP, or users can change it manually.
+
+### 4. Access Frontend
+
+Once deployed, access the frontend at: `http://FRONTEND_EXTERNAL_IP`
+
+The frontend will automatically connect to the API service within the cluster.
